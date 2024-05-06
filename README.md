@@ -11,5 +11,5 @@ The implementation of the model relies on the following libraries and tools:
 - scikit-learn==0.24.2
 - keras==2.3.1
 - matplotlib==2.2.2
-# smiles_one_hot
+# smiles_onehot.py
 The dictionary is created using "compound" as input and the final output is the one-hot encoding of the SMILES contained in the dataset.
