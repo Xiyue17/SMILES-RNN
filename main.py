@@ -22,19 +22,19 @@ from rdkit.Chem import rdMolDescriptors
 import time
 
 # data
-
-data = pd.read_csv('alcohol.txt', sep='\t', encoding='utf-16')
+data = pd.read_csv('data.txt', sep='\t', encoding='utf-16')
 
 #Normalize temperature and pressure
 scaler = MinMaxScaler()
 data[['T_1','T_2','TP_1','TP_2','TC_1','TC_2','pressure','temperature']] = scaler.fit_transform(data[['T_1','T_2','TP_1','TP_2','TC_1','TC_2','pressure','temperature']])
-#data[['T','T_b','Tc','Pc','w','p']] = scaler.fit_transform(data[['T','T_b','Tc','Pc','w','p']])
+
 X_smiles_1 = data['smiles_1']# Compound 1
 X_smiles_2 = data['smiles_2']# Compound 2
 T_1 = data['T_1']
 TC_1 = data['TC_1']
 TP_1 = data['TP_1']
 TV_1 = data['TV_1']
+hot1 = data['one_hot1']
 T_2 = data['T_2']
 TC_2 = data['TC_2']
 TP_2 = data['TP_2']
@@ -42,8 +42,8 @@ TV_2 = data['TV_2']
 hot2 = data['one_hot2']
 X_temp = data['temperature']
 X_pressure = data['pressure']
-comp1=data['comp1']
-comp1=data['comp2']
+comp1=data['comp1']#compl
+comp2=data['comp2']#compv
 # Converting SMILES code columns to molecular objects
 #X_mol_1 = [Chem.MolFromSmiles(smiles) for smiles in data['smiles_1']]
 #X_mol_2 = [Chem.MolFromSmiles(smiles) for smiles in data['smiles_2']]
@@ -55,9 +55,9 @@ hot2_encoded = pd.get_dummies(data['one_hot2'])
 
 data = pd.concat([data, hot1_encoded, hot2_encoded], axis=1)
 data.drop(['one_hot1', 'one_hot2'], axis=1, inplace=True)
-print(type(hot1_encoded))
-print(len(hot1_encoded))
-print(type(hot2))
+# print(type(hot1_encoded))
+# print(len(hot1_encoded))
+# print(type(hot2))
 # Update X with new column
 X = np.column_stack((hot1_encoded, hot2_encoded, T_1, T_2, TP_1, TP_2, TC_1, TC_2, X_temp, comp1))
 y = data[['pressure','comp1']].values #Output changes according to predicted target
@@ -65,6 +65,7 @@ y = data[['pressure','comp1']].values #Output changes according to predicted tar
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,shuffle= False)
 # Calculate the size of the training set
 #train_size = int(0.8 * len(X))
+
 kf = KFold(n_splits=10, shuffle=True)
 for train_index, test_index in kf.split(X):
     X_train, X_test = X[train_index], X[test_index]
@@ -92,12 +93,12 @@ model.add(Dense(2, activation='linear'))
 
 start_time = time.time()
 # Run your model training code here
-
-def root_mean_squared_error(y_true, y_pred):
-    mse = tf.reduce_mean(tf.square(y_pred - y_true))
-
-    rmse = tf.sqrt(mse)
-    return rmse
+#loss function:rmse
+# def root_mean_squared_error(y_true, y_pred):
+#     mse = tf.reduce_mean(tf.square(y_pred - y_true))
+#
+#     rmse = tf.sqrt(mse)
+#     return rmse
 
 #
 opt = Adam(lr=0.0001)
@@ -112,49 +113,36 @@ y_train_reshaped = y_train.reshape(y_train.shape[0], 1,y_train.shape[1])
 print("shape of x_train:", y_train_reshaped.shape)
 
 
-# Defining the pullback of the early stop method
-#early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-
-# Adding Early Stopping Methods and Validation Sets to Model Training
-history = model.fit(X_train_reshaped, y_train_reshaped, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+history = model.fit(X_train_reshaped, y_train_reshaped, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 #history = model.fit(X_train_reshaped,  y_train_reshaped, batch_size=batch_size, epochs=epochs)
-# 记录模型结束时间
+
+# Record the model end time
 end_time = time.time()
 #  Calculate model runtime
 execution_time = end_time - start_time
-print("模型运行时间为: {:.2f} 秒".format(execution_time))
+print("The model runtime was: {:.2f} 秒".format(execution_time))
 # Projected results
 y_pred = model.predict(X_test.reshape(X_test.shape[0], 1,X_test.shape[1]))
 y_pred = np.squeeze(y_pred, axis=1)
 
-
-
 # Output evaluation indicators
 mse = mean_squared_error(y_test, y_pred)
-mse0 = mean_squared_error(y_test[:, 0], y_pred[:, 0])
-mse1 = mean_squared_error(y_test[:, 1], y_pred[:, 1])
+rmse = np.sqrt(mse)
 mae = mean_absolute_error(y_test, y_pred)
-mae0 = mean_absolute_error(y_test[:, 0], y_pred[:, 0])
-mae1 = mean_absolute_error(y_test[:, 1], y_pred[:, 1])
+mae_0 = mean_absolute_error(y_test[:, 0], y_pred[:, 0])
+mae_1 = mean_absolute_error(y_test[:, 1], y_pred[:, 1])
 #r2 = r2_score(y_test[:, 1], y_pred[:, 1])
 r2 = r2_score(y_test, y_pred)
 
 
 print('epochs:',epochs)
 print('batch_size:',batch_size)
-print('MSE:', mse)
-print('MSE0:', mse0)
-print('MSE1:', mse1)
 print('MAE:', mae)
-print('MAE0:', mae0)
-print('MAE1:', mae1)
+print('MAE0:', mae_0)
+print('MAE1:', mae_1)
 print('R²:', r2)
-rmse = np.sqrt(mse)
-rmse0 = np.sqrt(mse0)
-rmse1 = np.sqrt(mse1)
 print('RMSE:', rmse)
-print('RMSE0:', rmse0)
-print('RMSE1:', rmse1)
+
 
 # Draw a graph of the loss curve during training
 plt.plot(history.history['loss'])
@@ -165,14 +153,14 @@ plt.ylabel('Loss')
 plt.show()
 
 
-plt.scatter(y_test[:, 0], y_pred[:, 0], label='pressure')
+plt.scatter(y_test[:, 0], y_pred[:, 0], label='pressure/temperature', color='blue')
 plt.title('Actual vs Predicted Values')
 plt.xlabel('Actual Value')
 plt.ylabel('Predicted Value')
 plt.legend()
 plt.show()
 
-plt.scatter(y_test[:, 1], y_pred[:, 1], label='CompL', color='orange')
+plt.scatter(y_test[:, 1], y_pred[:, 1], label='CompL/CompV', color='orange')
 plt.title('Actual vs Predicted Values')
 plt.xlabel('Actual Value')
 plt.ylabel('Predicted Value')
